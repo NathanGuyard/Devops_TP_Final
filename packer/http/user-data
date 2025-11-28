@@ -1,0 +1,26 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: fr
+  identity:
+    hostname: ubuntu-server
+    username: ubuntu
+    password: "$6$rounds=4096$xyz$hashed_password_here"
+  ssh:
+    install-server: true
+    allow-pw: true
+  storage:
+    layout:
+      name: lvm
+  packages:
+    - qemu-guest-agent
+    - cloud-init
+    - curl
+    - wget
+    - vim
+    - git
+  late-commands:
+    - echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/ubuntu
+    - chmod 440 /target/etc/sudoers.d/ubuntu

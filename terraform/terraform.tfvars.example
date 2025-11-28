@@ -1,0 +1,31 @@
+# Configuration Proxmox
+proxmox_api_url          = "https://192.168.1.100:8006/api2/json"
+proxmox_api_token_id     = "terraform@pam!terraform"
+proxmox_api_token_secret = "your-token-secret-here"
+proxmox_node             = "pve"
+
+# Templates Packer
+web_template_name = "web-server-template"
+app_template_name = "app-server-template"
+db_template_name  = "db-server-template"
+
+# Configuration des VMs
+vm_cores     = 2
+vm_memory    = 4096
+vm_disk_size = "20G"
+storage_pool = "local-lvm"
+
+# Configuration Réseau
+network_bridge = "vmbr0"
+gateway        = "192.168.1.1"
+
+# Adresses IP
+lb_ip        = "192.168.1.10"
+web_ips      = ["192.168.1.11", "192.168.1.12"]
+app_ips      = ["192.168.1.21", "192.168.1.22"]
+db_master_ip = "192.168.1.31"
+db_slave_ip  = "192.168.1.32"
+
+# Configuration SSH
+ssh_user       = "ubuntu"
+ssh_public_key = "ssh-rsa AAAA... your-public-key"

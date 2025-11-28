@@ -1,0 +1,44 @@
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfplan
+terraform/tfplan
+terraform/.terraform.lock.hcl
+terraform/outputs.json
+
+# Packer
+packer/packer_cache/
+packer/*.log
+
+# Ansible
+ansible/*.retry
+ansible/inventory/hosts.ini.bak
+
+# Application
+app/backend/.env
+app/backend/__pycache__/
+app/backend/*.pyc
+app/backend/venv/
+
+# Backups
+backups/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Secrets
+*.pem
+*.key
+secrets/
+credentials/

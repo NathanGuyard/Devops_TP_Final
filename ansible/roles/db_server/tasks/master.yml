@@ -1,0 +1,70 @@
+---
+- name: Configuration PostgreSQL Master
+  template:
+    src: postgresql-master.conf.j2
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/conf.d/master.conf"
+    owner: postgres
+    group: postgres
+    mode: '0644'
+  notify: Restart PostgreSQL
+
+- name: Configuration pg_hba.conf pour la réplication
+  template:
+    src: pg_hba.conf.j2
+    dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+    owner: postgres
+    group: postgres
+    mode: '0640'
+  notify: Restart PostgreSQL
+
+- name: Redémarrage de PostgreSQL pour appliquer la configuration
+  service:
+    name: postgresql
+    state: restarted
+
+- name: Attente du démarrage de PostgreSQL
+  wait_for:
+    port: "{{ db_port }}"
+    delay: 5
+    timeout: 60
+
+- name: Création de l'utilisateur de réplication
+  become_user: postgres
+  postgresql_user:
+    name: "{{ replication_user }}"
+    password: "{{ replication_password }}"
+    role_attr_flags: REPLICATION,LOGIN
+    state: present
+
+- name: Création de la base de données
+  become_user: postgres
+  postgresql_db:
+    name: "{{ db_name }}"
+    encoding: UTF8
+    lc_collate: en_US.UTF-8
+    lc_ctype: en_US.UTF-8
+    template: template0
+    state: present
+
+- name: Création de l'utilisateur de l'application
+  become_user: postgres
+  postgresql_user:
+    name: "{{ db_user }}"
+    password: "{{ db_password }}"
+    db: "{{ db_name }}"
+    priv: ALL
+    state: present
+
+- name: Script de backup automatique
+  template:
+    src: pg_backup.sh.j2
+    dest: /usr/local/bin/pg_backup.sh
+    mode: '0755'
+
+- name: Cron pour backup quotidien
+  cron:
+    name: "PostgreSQL daily backup"
+    minute: "0"
+    hour: "2"
+    job: "/usr/local/bin/pg_backup.sh"
+    user: postgres

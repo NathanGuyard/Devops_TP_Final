@@ -1,0 +1,99 @@
+---
+- name: Installation de Nginx
+  apt:
+    name:
+      - nginx
+      - nginx-extras
+    state: present
+
+- name: Création du répertoire SSL
+  file:
+    path: /etc/nginx/ssl
+    state: directory
+    mode: '0755'
+
+- name: Génération du certificat SSL auto-signé
+  command: >
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048
+    -keyout /etc/nginx/ssl/nginx.key
+    -out /etc/nginx/ssl/nginx.crt
+    -subj "/C=FR/ST=Paris/L=Paris/O=DevOps/CN={{ inventory_hostname }}"
+  args:
+    creates: /etc/nginx/ssl/nginx.crt
+
+- name: Création du répertoire web
+  file:
+    path: /var/www/html
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+
+- name: Création du répertoire pour les assets statiques
+  file:
+    path: /var/www/html/static
+    state: directory
+    owner: www-data
+    group: www-data
+    mode: '0755'
+
+- name: Configuration Nginx Web Server
+  template:
+    src: nginx-web.conf.j2
+    dest: /etc/nginx/nginx.conf
+    mode: '0644'
+  notify: Reload Nginx
+
+- name: Configuration du site Web
+  template:
+    src: web-site.conf.j2
+    dest: /etc/nginx/sites-available/webapp
+    mode: '0644'
+  notify: Reload Nginx
+
+- name: Activation du site Web
+  file:
+    src: /etc/nginx/sites-available/webapp
+    dest: /etc/nginx/sites-enabled/webapp
+    state: link
+  notify: Reload Nginx
+
+- name: Suppression du site par défaut
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload Nginx
+
+- name: Déploiement du contenu statique (frontend)
+  synchronize:
+    src: "{{ playbook_dir }}/../app/frontend/"
+    dest: /var/www/html/
+    delete: yes
+    recursive: yes
+  delegate_to: "{{ inventory_hostname }}"
+  become: yes
+
+- name: Configuration des permissions du contenu web
+  file:
+    path: /var/www/html
+    owner: www-data
+    group: www-data
+    recurse: yes
+
+- name: Autoriser HTTP dans le firewall
+  ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+
+- name: Autoriser HTTPS dans le firewall
+  ufw:
+    rule: allow
+    port: '443'
+    proto: tcp
+
+- name: Démarrage et activation de Nginx
+  service:
+    name: nginx
+    state: started
+    enabled: yes

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevOps Application</title>
+    <link rel="stylesheet" href="static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>DevOps Application</h1>
+            <p class="subtitle">Infrastructure haute disponibilité</p>
+        </header>
+
+        <main>
+            <!-- Section Status -->
+            <section class="card" id="status-section">
+                <h2>Status du Système</h2>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">API</span>
+                        <span class="status-indicator" id="api-status">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Base de données</span>
+                        <span class="status-indicator" id="db-status">--</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Serveur</span>
+                        <span class="status-value" id="server-name">--</span>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="checkHealth()">Rafraîchir</button>
+            </section>
+
+            <!-- Section Items -->
+            <section class="card">
+                <h2>Gestion des Items</h2>
+
+                <!-- Formulaire d'ajout -->
+                <form id="item-form" class="form">
+                    <div class="form-group">
+                        <label for="item-name">Nom</label>
+                        <input type="text" id="item-name" placeholder="Nom de l'item" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="item-description">Description</label>
+                        <textarea id="item-description" placeholder="Description (optionnel)"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Ajouter</button>
+                </form>
+
+                <!-- Liste des items -->
+                <div class="items-list" id="items-list">
+                    <p class="loading">Chargement...</p>
+                </div>
+            </section>
+
+            <!-- Section Statistiques -->
+            <section class="card">
+                <h2>Statistiques</h2>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <span class="stat-value" id="total-items">0</span>
+                        <span class="stat-label">Total Items</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-value" id="items-today">0</span>
+                        <span class="stat-label">Aujourd'hui</span>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>DevOps Project - Infrastructure distribuée avec Load Balancing</p>
+            <p class="server-info">Servi par: <span id="footer-server">--</span></p>
+        </footer>
+    </div>
+
+    <script src="static/js/app.js"></script>
+</body>
+</html>

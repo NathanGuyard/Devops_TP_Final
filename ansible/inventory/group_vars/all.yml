@@ -1,0 +1,32 @@
+---
+# Variables globales pour tous les serveurs
+
+# Application
+app_name: "devops-app"
+app_domain: "app.local"
+app_port: 3000
+
+# Base de données
+db_name: "appdb"
+db_user: "appuser"
+db_password: "SecureP@ssw0rd123!"
+db_port: 5432
+
+# Réplication PostgreSQL
+replication_user: "replicator"
+replication_password: "R3pl1c@t0r!"
+
+# Réseau
+lb_ip: "192.168.1.10"
+web_servers:
+  - { name: "web-01", ip: "192.168.1.11" }
+  - { name: "web-02", ip: "192.168.1.12" }
+app_servers:
+  - { name: "app-01", ip: "192.168.1.21" }
+  - { name: "app-02", ip: "192.168.1.22" }
+db_master_ip: "192.168.1.31"
+db_slave_ip: "192.168.1.32"
+
+# SSL
+ssl_certificate: "/etc/nginx/ssl/nginx.crt"
+ssl_certificate_key: "/etc/nginx/ssl/nginx.key"

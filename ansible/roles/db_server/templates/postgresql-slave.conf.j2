@@ -1,0 +1,32 @@
+# Configuration PostgreSQL Slave (Hot Standby)
+# Optimisé pour 4GB RAM
+
+# Connexions
+listen_addresses = '*'
+port = {{ db_port }}
+max_connections = 100
+
+# Mémoire
+shared_buffers = 1GB
+effective_cache_size = 3GB
+maintenance_work_mem = 256MB
+work_mem = 64MB
+
+# Hot Standby
+hot_standby = on
+hot_standby_feedback = on
+
+# Réplication
+primary_conninfo = 'host={{ db_master_ip }} port={{ db_port }} user={{ replication_user }} password={{ replication_password }}'
+primary_slot_name = 'slave_slot'
+
+# Recovery
+recovery_target_timeline = 'latest'
+
+# Logging
+logging_collector = on
+log_directory = 'log'
+log_filename = 'postgresql-%Y-%m-%d.log'
+log_rotation_age = 1d
+log_rotation_size = 100MB
+log_min_duration_statement = 1000

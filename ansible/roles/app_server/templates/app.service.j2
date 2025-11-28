@@ -1,0 +1,25 @@
+[Unit]
+Description={{ app_name }} - Application Python Flask
+After=network.target
+
+[Service]
+User=appuser
+Group=appuser
+WorkingDirectory=/opt/app
+Environment="PATH=/opt/app/venv/bin"
+EnvironmentFile=/opt/app/.env
+ExecStart=/opt/app/venv/bin/gunicorn \
+    --workers 4 \
+    --bind 0.0.0.0:{{ app_port }} \
+    --access-logfile /var/log/app/access.log \
+    --error-logfile /var/log/app/error.log \
+    --capture-output \
+    --timeout 120 \
+    app:app
+Restart=always
+RestartSec=5
+StandardOutput=append:/var/log/app/stdout.log
+StandardError=append:/var/log/app/stderr.log
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,66 @@
+---
+# Playbook de déploiement de l'application uniquement
+- name: Déploiement de l'application
+  hosts: app_servers
+  become: yes
+  vars:
+    app_version: "{{ lookup('env', 'APP_VERSION') | default('latest', true) }}"
+
+  tasks:
+    - name: Arrêt du service application
+      service:
+        name: app
+        state: stopped
+
+    - name: Mise à jour du code de l'application
+      synchronize:
+        src: "{{ playbook_dir }}/../../app/backend/"
+        dest: /opt/app/
+        delete: no
+        recursive: yes
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Mise à jour des dépendances Python
+      pip:
+        requirements: /opt/app/requirements.txt
+        virtualenv: /opt/app/venv
+      become_user: appuser
+
+    - name: Démarrage du service application
+      service:
+        name: app
+        state: started
+
+    - name: Vérification de la santé de l'application
+      uri:
+        url: "http://localhost:{{ app_port }}/api/health"
+        status_code: 200
+      register: health_check
+      retries: 5
+      delay: 5
+      until: health_check.status == 200
+
+- name: Mise à jour du contenu statique
+  hosts: web_servers
+  become: yes
+
+  tasks:
+    - name: Déploiement du frontend
+      synchronize:
+        src: "{{ playbook_dir }}/../../app/frontend/"
+        dest: /var/www/html/
+        delete: yes
+        recursive: yes
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Configuration des permissions
+      file:
+        path: /var/www/html
+        owner: www-data
+        group: www-data
+        recurse: yes
+
+    - name: Rechargement de Nginx
+      service:
+        name: nginx
+        state: reloaded

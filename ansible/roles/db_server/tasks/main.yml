@@ -1,0 +1,65 @@
+---
+- name: Installation des dépendances
+  apt:
+    name:
+      - gnupg2
+      - wget
+      - lsb-release
+      - acl
+    state: present
+
+- name: Ajout de la clé GPG PostgreSQL
+  apt_key:
+    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+    state: present
+
+- name: Ajout du repository PostgreSQL
+  apt_repository:
+    repo: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    state: present
+    filename: pgdg
+
+- name: Installation de PostgreSQL
+  apt:
+    name:
+      - "postgresql-{{ postgresql_version }}"
+      - "postgresql-contrib-{{ postgresql_version }}"
+      - python3-psycopg2
+    state: present
+    update_cache: yes
+
+- name: Création du répertoire pour les backups
+  file:
+    path: /var/backups/postgresql
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0750'
+
+- name: Création du répertoire pour les archives WAL
+  file:
+    path: /var/lib/postgresql/wal_archive
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0750'
+
+- name: Configuration Master
+  include_tasks: master.yml
+  when: role == 'master'
+
+- name: Configuration Slave
+  include_tasks: slave.yml
+  when: role == 'slave'
+
+- name: Autoriser PostgreSQL dans le firewall
+  ufw:
+    rule: allow
+    port: "{{ db_port }}"
+    proto: tcp
+
+- name: Démarrage et activation de PostgreSQL
+  service:
+    name: postgresql
+    state: started
+    enabled: yes

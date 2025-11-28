@@ -1,0 +1,67 @@
+---
+- name: Installation de Nginx
+  apt:
+    name:
+      - nginx
+      - nginx-extras
+    state: present
+
+- name: Création du répertoire SSL
+  file:
+    path: /etc/nginx/ssl
+    state: directory
+    mode: '0755'
+
+- name: Génération du certificat SSL auto-signé
+  command: >
+    openssl req -x509 -nodes -days 365 -newkey rsa:2048
+    -keyout /etc/nginx/ssl/nginx.key
+    -out /etc/nginx/ssl/nginx.crt
+    -subj "/C=FR/ST=Paris/L=Paris/O=DevOps/CN={{ app_domain }}"
+  args:
+    creates: /etc/nginx/ssl/nginx.crt
+
+- name: Configuration Nginx Load Balancer
+  template:
+    src: nginx-lb.conf.j2
+    dest: /etc/nginx/nginx.conf
+    mode: '0644'
+  notify: Reload Nginx
+
+- name: Configuration du site Load Balancer
+  template:
+    src: lb-site.conf.j2
+    dest: /etc/nginx/sites-available/load-balancer
+    mode: '0644'
+  notify: Reload Nginx
+
+- name: Activation du site Load Balancer
+  file:
+    src: /etc/nginx/sites-available/load-balancer
+    dest: /etc/nginx/sites-enabled/load-balancer
+    state: link
+  notify: Reload Nginx
+
+- name: Suppression du site par défaut
+  file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload Nginx
+
+- name: Autoriser HTTP dans le firewall
+  ufw:
+    rule: allow
+    port: '80'
+    proto: tcp
+
+- name: Autoriser HTTPS dans le firewall
+  ufw:
+    rule: allow
+    port: '443'
+    proto: tcp
+
+- name: Démarrage et activation de Nginx
+  service:
+    name: nginx
+    state: started
+    enabled: yes

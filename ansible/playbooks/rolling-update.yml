@@ -1,0 +1,77 @@
+---
+# Playbook de mise à jour sans interruption (rolling update)
+- name: Rolling update des serveurs applicatifs
+  hosts: app_servers
+  become: yes
+  serial: 1
+  max_fail_percentage: 0
+
+  pre_tasks:
+    - name: Retrait du serveur du load balancing
+      delegate_to: "{{ item }}"
+      lineinfile:
+        path: /etc/nginx/sites-available/webapp
+        regexp: "server {{ ansible_host }}:{{ app_port }}"
+        line: "    server {{ ansible_host }}:{{ app_port }} down;"
+      loop: "{{ groups['web_servers'] }}"
+
+    - name: Rechargement de Nginx sur les web servers
+      delegate_to: "{{ item }}"
+      service:
+        name: nginx
+        state: reloaded
+      loop: "{{ groups['web_servers'] }}"
+
+    - name: Attente de la fin des connexions actives
+      pause:
+        seconds: 10
+
+  tasks:
+    - name: Arrêt du service application
+      service:
+        name: app
+        state: stopped
+
+    - name: Mise à jour du code
+      synchronize:
+        src: "{{ playbook_dir }}/../../app/backend/"
+        dest: /opt/app/
+        delete: no
+        recursive: yes
+      delegate_to: "{{ inventory_hostname }}"
+
+    - name: Mise à jour des dépendances
+      pip:
+        requirements: /opt/app/requirements.txt
+        virtualenv: /opt/app/venv
+      become_user: appuser
+
+    - name: Démarrage du service
+      service:
+        name: app
+        state: started
+
+    - name: Vérification de santé
+      uri:
+        url: "http://localhost:{{ app_port }}/api/health"
+        status_code: 200
+      register: health_check
+      retries: 10
+      delay: 3
+      until: health_check.status == 200
+
+  post_tasks:
+    - name: Réactivation du serveur dans le load balancing
+      delegate_to: "{{ item }}"
+      lineinfile:
+        path: /etc/nginx/sites-available/webapp
+        regexp: "server {{ ansible_host }}:{{ app_port }}"
+        line: "    server {{ ansible_host }}:{{ app_port }} weight=1 max_fails=3 fail_timeout=30s;"
+      loop: "{{ groups['web_servers'] }}"
+
+    - name: Rechargement de Nginx
+      delegate_to: "{{ item }}"
+      service:
+        name: nginx
+        state: reloaded
+      loop: "{{ groups['web_servers'] }}"

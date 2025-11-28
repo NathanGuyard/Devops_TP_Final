@@ -1,0 +1,32 @@
+---
+# Playbook principal - Déploiement complet de l'infrastructure
+- name: Configuration commune sur tous les serveurs
+  hosts: all
+  become: yes
+  roles:
+    - common
+
+- name: Configuration des serveurs de base de données
+  hosts: db_servers
+  become: yes
+  serial: 1
+  roles:
+    - db_server
+
+- name: Configuration des serveurs applicatifs
+  hosts: app_servers
+  become: yes
+  roles:
+    - app_server
+
+- name: Configuration des serveurs web
+  hosts: web_servers
+  become: yes
+  roles:
+    - web_server
+
+- name: Configuration du load balancer
+  hosts: load_balancer
+  become: yes
+  roles:
+    - load_balancer

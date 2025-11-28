@@ -1,0 +1,95 @@
+{
+  "variables": {
+    "proxmox_url": "{{env `PROXMOX_URL`}}",
+    "proxmox_username": "{{env `PROXMOX_USERNAME`}}",
+    "proxmox_password": "{{env `PROXMOX_PASSWORD`}}",
+    "proxmox_node": "{{env `PROXMOX_NODE`}}",
+    "iso_file": "local:iso/ubuntu-22.04-server.iso",
+    "vm_id": "9002",
+    "vm_name": "app-server-template",
+    "ssh_username": "ubuntu",
+    "ssh_password": "ubuntu"
+  },
+  "builders": [
+    {
+      "type": "proxmox-iso",
+      "proxmox_url": "{{user `proxmox_url`}}",
+      "username": "{{user `proxmox_username`}}",
+      "password": "{{user `proxmox_password`}}",
+      "node": "{{user `proxmox_node`}}",
+      "insecure_skip_tls_verify": true,
+
+      "iso_file": "{{user `iso_file`}}",
+      "iso_checksum": "none",
+      "unmount_iso": true,
+
+      "vm_id": "{{user `vm_id`}}",
+      "vm_name": "{{user `vm_name`}}",
+      "template_description": "App Server Template - Python Runtime",
+
+      "cores": 2,
+      "memory": 4096,
+      "os": "l26",
+
+      "scsi_controller": "virtio-scsi-pci",
+      "disks": [
+        {
+          "type": "scsi",
+          "disk_size": "20G",
+          "storage_pool": "local-lvm",
+          "format": "raw"
+        }
+      ],
+
+      "network_adapters": [
+        {
+          "model": "virtio",
+          "bridge": "vmbr0"
+        }
+      ],
+
+      "cloud_init": true,
+      "cloud_init_storage_pool": "local-lvm",
+
+      "ssh_username": "{{user `ssh_username`}}",
+      "ssh_password": "{{user `ssh_password`}}",
+      "ssh_timeout": "20m",
+
+      "http_directory": "http",
+      "boot_command": [
+        "<esc><wait>",
+        "e<wait>",
+        "<down><down><down><end>",
+        " autoinstall ds=nocloud-net;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/",
+        "<F10>"
+      ],
+      "boot_wait": "5s"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "shell",
+      "inline": [
+        "sudo apt-get update",
+        "sudo apt-get install -y python3 python3-pip python3-venv"
+      ]
+    },
+    {
+      "type": "ansible",
+      "playbook_file": "../ansible/playbooks/packer-app.yml",
+      "extra_arguments": [
+        "--extra-vars",
+        "image_type=app"
+      ]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "sudo apt-get clean",
+        "sudo rm -rf /var/lib/apt/lists/*",
+        "sudo rm -rf /tmp/*",
+        "sudo sync"
+      ]
+    }
+  ]
+}

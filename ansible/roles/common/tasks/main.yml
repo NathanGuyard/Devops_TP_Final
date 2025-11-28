@@ -1,0 +1,53 @@
+---
+- name: Mise à jour du cache apt
+  apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Installation des packages de base
+  apt:
+    name:
+      - curl
+      - wget
+      - vim
+      - htop
+      - net-tools
+      - dnsutils
+      - ca-certificates
+      - gnupg
+      - software-properties-common
+      - ufw
+    state: present
+
+- name: Configuration du hostname
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+- name: Mise à jour de /etc/hosts
+  lineinfile:
+    path: /etc/hosts
+    line: "{{ item.ip }} {{ item.name }}"
+    state: present
+  loop:
+    - { ip: "{{ lb_ip }}", name: "lb-01" }
+    - { ip: "{{ web_servers[0].ip }}", name: "web-01" }
+    - { ip: "{{ web_servers[1].ip }}", name: "web-02" }
+    - { ip: "{{ app_servers[0].ip }}", name: "app-01" }
+    - { ip: "{{ app_servers[1].ip }}", name: "app-02" }
+    - { ip: "{{ db_master_ip }}", name: "db-master" }
+    - { ip: "{{ db_slave_ip }}", name: "db-slave" }
+
+- name: Configuration du timezone
+  timezone:
+    name: Europe/Paris
+
+- name: Activation de UFW
+  ufw:
+    state: enabled
+    policy: deny
+
+- name: Autoriser SSH
+  ufw:
+    rule: allow
+    port: '22'
+    proto: tcp

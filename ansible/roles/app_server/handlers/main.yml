@@ -1,0 +1,10 @@
+---
+- name: Restart App
+  service:
+    name: app
+    state: restarted
+
+- name: Reload App
+  service:
+    name: app
+    state: reloaded

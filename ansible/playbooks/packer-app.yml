@@ -1,0 +1,102 @@
+---
+- name: Configuration de base pour image App Server
+  hosts: all
+  become: yes
+  vars:
+    image_type: app
+
+  tasks:
+    - name: Mise à jour du système
+      apt:
+        update_cache: yes
+        upgrade: dist
+        cache_valid_time: 3600
+
+    - name: Installation de Python et dépendances
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-venv
+          - python3-dev
+          - build-essential
+          - libpq-dev
+        state: present
+
+    - name: Création de l'utilisateur application
+      user:
+        name: appuser
+        shell: /bin/bash
+        create_home: yes
+        system: yes
+
+    - name: Création du répertoire de l'application
+      file:
+        path: /opt/app
+        state: directory
+        owner: appuser
+        group: appuser
+        mode: '0755'
+
+    - name: Création du répertoire des logs
+      file:
+        path: /var/log/app
+        state: directory
+        owner: appuser
+        group: appuser
+        mode: '0755'
+
+    - name: Création de l'environnement virtuel Python
+      command: python3 -m venv /opt/app/venv
+      args:
+        creates: /opt/app/venv
+      become_user: appuser
+
+    - name: Installation des packages Python de base
+      pip:
+        name:
+          - flask
+          - gunicorn
+          - psycopg2-binary
+          - python-dotenv
+          - requests
+        virtualenv: /opt/app/venv
+      become_user: appuser
+
+    - name: Création du fichier de configuration systemd
+      copy:
+        dest: /etc/systemd/system/app.service
+        content: |
+          [Unit]
+          Description=Application Python Flask
+          After=network.target
+
+          [Service]
+          User=appuser
+          Group=appuser
+          WorkingDirectory=/opt/app
+          Environment="PATH=/opt/app/venv/bin"
+          EnvironmentFile=/opt/app/.env
+          ExecStart=/opt/app/venv/bin/gunicorn --workers 4 --bind 0.0.0.0:3000 app:app
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+
+    - name: Création du fichier .env template
+      copy:
+        dest: /opt/app/.env.template
+        content: |
+          FLASK_ENV=production
+          DATABASE_URL=postgresql://user:password@db-master:5432/appdb
+          SECRET_KEY=change-me-in-production
+          LOG_LEVEL=INFO
+        owner: appuser
+        group: appuser
+        mode: '0600'
+
+    - name: Rechargement de systemd
+      systemd:
+        daemon_reload: yes

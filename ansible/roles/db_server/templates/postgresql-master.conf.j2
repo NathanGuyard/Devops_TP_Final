@@ -1,0 +1,45 @@
+# Configuration PostgreSQL Master
+# Optimisé pour 4GB RAM
+
+# Connexions
+listen_addresses = '*'
+port = {{ db_port }}
+max_connections = 100
+
+# Mémoire
+shared_buffers = 1GB
+effective_cache_size = 3GB
+maintenance_work_mem = 256MB
+work_mem = 64MB
+
+# WAL et Réplication
+wal_level = replica
+max_wal_senders = 5
+wal_keep_size = 1GB
+synchronous_commit = on
+
+# Archivage
+archive_mode = on
+archive_command = 'cp %p /var/lib/postgresql/wal_archive/%f'
+
+# Checkpoints
+checkpoint_completion_target = 0.9
+max_wal_size = 2GB
+min_wal_size = 512MB
+
+# Logging
+logging_collector = on
+log_directory = 'log'
+log_filename = 'postgresql-%Y-%m-%d.log'
+log_rotation_age = 1d
+log_rotation_size = 100MB
+log_min_duration_statement = 1000
+log_checkpoints = on
+log_connections = on
+log_disconnections = on
+log_lock_waits = on
+
+# Statistiques
+track_activities = on
+track_counts = on
+track_io_timing = on
