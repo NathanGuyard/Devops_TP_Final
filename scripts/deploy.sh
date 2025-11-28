@@ -54,12 +54,22 @@ download_iso() {
     fi
 }
 
+# Installation du plugin Packer Proxmox
+install_packer_plugin() {
+    log_info "Installation du plugin Packer Proxmox..."
+    packer plugins install github.com/hashicorp/proxmox
+    log_success "Plugin Proxmox installé"
+}
+
 # Construction des images Packer
 build_images() {
     log_info "Construction des images Packer..."
 
     # Télécharger l'ISO d'abord
     download_iso
+
+    # Installer le plugin Proxmox
+    install_packer_plugin
 
     cd "${PROJECT_DIR}/packer"
 
