@@ -1,5 +1,5 @@
 ---
-- name: Configuration de base pour image Database Server
+- name: Configuration de base pour image Database Server (Alpine)
   hosts: all
   become: yes
   vars:
@@ -7,39 +7,18 @@
     postgresql_version: "15"
 
   tasks:
-    - name: Mise à jour du système
-      apt:
+    - name: Mise à jour des packages
+      apk:
         update_cache: yes
-        upgrade: dist
-        cache_valid_time: 3600
-
-    - name: Installation des dépendances
-      apt:
-        name:
-          - gnupg2
-          - wget
-          - lsb-release
-        state: present
-
-    - name: Ajout de la clé GPG PostgreSQL
-      apt_key:
-        url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
-        state: present
-
-    - name: Ajout du repository PostgreSQL
-      apt_repository:
-        repo: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
-        state: present
-        filename: pgdg
+        upgrade: yes
 
     - name: Installation de PostgreSQL
-      apt:
+      apk:
         name:
-          - "postgresql-{{ postgresql_version }}"
-          - "postgresql-contrib-{{ postgresql_version }}"
-          - "postgresql-client-{{ postgresql_version }}"
+          - postgresql{{ postgresql_version }}
+          - postgresql{{ postgresql_version }}-contrib
+          - postgresql{{ postgresql_version }}-client
         state: present
-        update_cache: yes
 
     - name: Création du répertoire pour les backups
       file:
@@ -57,42 +36,11 @@
         group: postgres
         mode: '0750'
 
-    - name: Configuration PostgreSQL optimisée
-      copy:
-        dest: "/etc/postgresql/{{ postgresql_version }}/main/conf.d/custom.conf"
-        content: |
-          # Performance
-          shared_buffers = 1GB
-          effective_cache_size = 3GB
-          maintenance_work_mem = 256MB
-          work_mem = 64MB
-
-          # WAL et Réplication
-          wal_level = replica
-          max_wal_senders = 5
-          wal_keep_size = 1GB
-          hot_standby = on
-
-          # Archivage
-          archive_mode = on
-          archive_command = 'cp %p /var/lib/postgresql/wal_archive/%f'
-
-          # Logging
-          logging_collector = on
-          log_directory = 'log'
-          log_filename = 'postgresql-%Y-%m-%d.log'
-          log_rotation_age = 1d
-          log_rotation_size = 100MB
-          log_min_duration_statement = 1000
-        owner: postgres
-        group: postgres
-        mode: '0644'
-
     - name: Script de backup automatique
       copy:
         dest: /usr/local/bin/pg_backup.sh
         content: |
-          #!/bin/bash
+          #!/bin/sh
           BACKUP_DIR="/var/backups/postgresql"
           TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 
@@ -102,16 +50,10 @@
           find ${BACKUP_DIR} -name "full_backup_*.sql.gz" -mtime +7 -delete
         mode: '0755'
 
-    - name: Cron pour backup quotidien
-      cron:
-        name: "PostgreSQL daily backup"
-        minute: "0"
-        hour: "2"
-        job: "/usr/local/bin/pg_backup.sh"
-        user: postgres
+    - name: Activation de PostgreSQL au démarrage
+      command: rc-update add postgresql default
 
     - name: Arrêt de PostgreSQL pour l'image
       service:
         name: postgresql
         state: stopped
-        enabled: yes

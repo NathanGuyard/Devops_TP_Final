@@ -31,40 +31,52 @@ variable "proxmox_node" {
 variable "web_template_name" {
   description = "Nom du template Packer pour les serveurs web"
   type        = string
-  default     = "web-server-template"
+  default     = "alpine-web-template"
 }
 
 variable "app_template_name" {
   description = "Nom du template Packer pour les serveurs app"
   type        = string
-  default     = "app-server-template"
+  default     = "alpine-app-template"
 }
 
 variable "db_template_name" {
   description = "Nom du template Packer pour les serveurs database"
   type        = string
-  default     = "db-server-template"
+  default     = "alpine-db-template"
 }
 
 # ============================================================================
-# VARIABLES VMS
+# VARIABLES VMS (Optimisé pour Alpine Linux)
 # ============================================================================
 variable "vm_cores" {
   description = "Nombre de CPU cores par VM"
   type        = number
-  default     = 2
+  default     = 1
 }
 
 variable "vm_memory" {
-  description = "RAM en MB par VM"
+  description = "RAM en MB par VM (512MB pour web/app, 1024MB pour db)"
   type        = number
-  default     = 4096
+  default     = 512
+}
+
+variable "vm_memory_db" {
+  description = "RAM en MB pour les serveurs DB"
+  type        = number
+  default     = 1024
 }
 
 variable "vm_disk_size" {
   description = "Taille du disque par VM"
   type        = string
-  default     = "20G"
+  default     = "2G"
+}
+
+variable "vm_disk_size_db" {
+  description = "Taille du disque pour les serveurs DB"
+  type        = string
+  default     = "4G"
 }
 
 variable "storage_pool" {

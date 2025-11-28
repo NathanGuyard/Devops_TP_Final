@@ -156,7 +156,7 @@ resource "proxmox_vm_qemu" "db_master" {
   os_type     = "cloud-init"
   cores       = var.vm_cores
   sockets     = 1
-  memory      = var.vm_memory
+  memory      = var.vm_memory_db
   scsihw      = "virtio-scsi-pci"
   bootdisk    = "scsi0"
 
@@ -195,7 +195,7 @@ resource "proxmox_vm_qemu" "db_slave" {
   os_type     = "cloud-init"
   cores       = var.vm_cores
   sockets     = 1
-  memory      = var.vm_memory
+  memory      = var.vm_memory_db
   scsihw      = "virtio-scsi-pci"
   bootdisk    = "scsi0"
 

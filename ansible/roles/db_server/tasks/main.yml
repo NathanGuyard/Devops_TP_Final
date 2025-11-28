@@ -1,32 +1,21 @@
 ---
-- name: Installation des dépendances
-  apt:
+# Rôle DB Server pour Alpine Linux
+- name: Installation de PostgreSQL et dépendances
+  apk:
     name:
-      - gnupg2
-      - wget
-      - lsb-release
-      - acl
+      - postgresql15
+      - postgresql15-contrib
+      - postgresql15-client
+      - py3-psycopg2
     state: present
 
-- name: Ajout de la clé GPG PostgreSQL
-  apt_key:
-    url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
-    state: present
-
-- name: Ajout du repository PostgreSQL
-  apt_repository:
-    repo: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
-    state: present
-    filename: pgdg
-
-- name: Installation de PostgreSQL
-  apt:
-    name:
-      - "postgresql-{{ postgresql_version }}"
-      - "postgresql-contrib-{{ postgresql_version }}"
-      - python3-psycopg2
-    state: present
-    update_cache: yes
+- name: Création du répertoire de données PostgreSQL
+  file:
+    path: /var/lib/postgresql/data
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0700'
 
 - name: Création du répertoire pour les backups
   file:
@@ -44,6 +33,21 @@
     group: postgres
     mode: '0750'
 
+- name: Création du répertoire des logs
+  file:
+    path: /var/log/postgresql
+    state: directory
+    owner: postgres
+    group: postgres
+    mode: '0755'
+
+- name: Initialisation de la base de données (si nécessaire)
+  become_user: postgres
+  command: initdb -D /var/lib/postgresql/data
+  args:
+    creates: /var/lib/postgresql/data/PG_VERSION
+  when: role == 'master'
+
 - name: Configuration Master
   include_tasks: master.yml
   when: role == 'master'
@@ -52,14 +56,18 @@
   include_tasks: slave.yml
   when: role == 'slave'
 
-- name: Autoriser PostgreSQL dans le firewall
-  ufw:
-    rule: allow
-    port: "{{ db_port }}"
-    proto: tcp
+- name: Autoriser PostgreSQL dans iptables
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ db_port }}"
+    jump: ACCEPT
 
-- name: Démarrage et activation de PostgreSQL
+- name: Activation du service au démarrage
+  command: rc-update add postgresql default
+  changed_when: false
+
+- name: Démarrage de PostgreSQL
   service:
     name: postgresql
     state: started
-    enabled: yes

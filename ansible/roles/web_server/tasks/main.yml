@@ -1,9 +1,10 @@
 ---
+# Rôle Web Server pour Alpine Linux
 - name: Installation de Nginx
-  apt:
+  apk:
     name:
       - nginx
-      - nginx-extras
+      - openssl
     state: present
 
 - name: Création du répertoire SSL
@@ -25,16 +26,16 @@
   file:
     path: /var/www/html
     state: directory
-    owner: www-data
-    group: www-data
+    owner: nginx
+    group: nginx
     mode: '0755'
 
 - name: Création du répertoire pour les assets statiques
   file:
     path: /var/www/html/static
     state: directory
-    owner: www-data
-    group: www-data
+    owner: nginx
+    group: nginx
     mode: '0755'
 
 - name: Configuration Nginx Web Server
@@ -42,58 +43,42 @@
     src: nginx-web.conf.j2
     dest: /etc/nginx/nginx.conf
     mode: '0644'
-  notify: Reload Nginx
+  notify: Restart Nginx
+
+- name: Création du répertoire conf.d
+  file:
+    path: /etc/nginx/conf.d
+    state: directory
+    mode: '0755'
 
 - name: Configuration du site Web
   template:
     src: web-site.conf.j2
-    dest: /etc/nginx/sites-available/webapp
+    dest: /etc/nginx/conf.d/webapp.conf
     mode: '0644'
-  notify: Reload Nginx
-
-- name: Activation du site Web
-  file:
-    src: /etc/nginx/sites-available/webapp
-    dest: /etc/nginx/sites-enabled/webapp
-    state: link
-  notify: Reload Nginx
-
-- name: Suppression du site par défaut
-  file:
-    path: /etc/nginx/sites-enabled/default
-    state: absent
-  notify: Reload Nginx
+  notify: Restart Nginx
 
 - name: Déploiement du contenu statique (frontend)
-  synchronize:
+  copy:
     src: "{{ playbook_dir }}/../app/frontend/"
     dest: /var/www/html/
-    delete: yes
-    recursive: yes
-  delegate_to: "{{ inventory_hostname }}"
-  become: yes
+    owner: nginx
+    group: nginx
+    mode: '0644'
+    directory_mode: '0755'
 
-- name: Configuration des permissions du contenu web
-  file:
-    path: /var/www/html
-    owner: www-data
-    group: www-data
-    recurse: yes
+- name: Autoriser HTTP dans iptables
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 80
+    jump: ACCEPT
 
-- name: Autoriser HTTP dans le firewall
-  ufw:
-    rule: allow
-    port: '80'
-    proto: tcp
+- name: Activation de Nginx au démarrage
+  command: rc-update add nginx default
+  changed_when: false
 
-- name: Autoriser HTTPS dans le firewall
-  ufw:
-    rule: allow
-    port: '443'
-    proto: tcp
-
-- name: Démarrage et activation de Nginx
+- name: Démarrage de Nginx
   service:
     name: nginx
     state: started
-    enabled: yes

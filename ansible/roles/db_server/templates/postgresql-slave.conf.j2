@@ -1,16 +1,16 @@
-# Configuration PostgreSQL Slave (Hot Standby)
-# Optimisé pour 4GB RAM
+# Configuration PostgreSQL Slave (Hot Standby) pour Alpine Linux
+# Optimisé pour 1GB RAM
 
 # Connexions
 listen_addresses = '*'
 port = {{ db_port }}
-max_connections = 100
+max_connections = 50
 
-# Mémoire
-shared_buffers = 1GB
-effective_cache_size = 3GB
-maintenance_work_mem = 256MB
-work_mem = 64MB
+# Mémoire (optimisé pour 1GB RAM)
+shared_buffers = 256MB
+effective_cache_size = 512MB
+maintenance_work_mem = 64MB
+work_mem = 16MB
 
 # Hot Standby
 hot_standby = on
@@ -25,8 +25,11 @@ recovery_target_timeline = 'latest'
 
 # Logging
 logging_collector = on
-log_directory = 'log'
+log_directory = '/var/log/postgresql'
 log_filename = 'postgresql-%Y-%m-%d.log'
 log_rotation_age = 1d
-log_rotation_size = 100MB
+log_rotation_size = 50MB
 log_min_duration_statement = 1000
+
+# Data directory
+data_directory = '/var/lib/postgresql/data'

@@ -1,21 +1,21 @@
-# Configuration PostgreSQL Master
-# Optimisé pour 4GB RAM
+# Configuration PostgreSQL Master pour Alpine Linux
+# Optimisé pour 1GB RAM
 
 # Connexions
 listen_addresses = '*'
 port = {{ db_port }}
-max_connections = 100
+max_connections = 50
 
-# Mémoire
-shared_buffers = 1GB
-effective_cache_size = 3GB
-maintenance_work_mem = 256MB
-work_mem = 64MB
+# Mémoire (optimisé pour 1GB RAM)
+shared_buffers = 256MB
+effective_cache_size = 512MB
+maintenance_work_mem = 64MB
+work_mem = 16MB
 
 # WAL et Réplication
 wal_level = replica
 max_wal_senders = 5
-wal_keep_size = 1GB
+wal_keep_size = 256MB
 synchronous_commit = on
 
 # Archivage
@@ -24,22 +24,23 @@ archive_command = 'cp %p /var/lib/postgresql/wal_archive/%f'
 
 # Checkpoints
 checkpoint_completion_target = 0.9
-max_wal_size = 2GB
-min_wal_size = 512MB
+max_wal_size = 512MB
+min_wal_size = 128MB
 
 # Logging
 logging_collector = on
-log_directory = 'log'
+log_directory = '/var/log/postgresql'
 log_filename = 'postgresql-%Y-%m-%d.log'
 log_rotation_age = 1d
-log_rotation_size = 100MB
+log_rotation_size = 50MB
 log_min_duration_statement = 1000
 log_checkpoints = on
 log_connections = on
 log_disconnections = on
-log_lock_waits = on
 
 # Statistiques
 track_activities = on
 track_counts = on
-track_io_timing = on
+
+# Data directory
+data_directory = '/var/lib/postgresql/data'

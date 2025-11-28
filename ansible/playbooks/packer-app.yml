@@ -1,32 +1,33 @@
 ---
-- name: Configuration de base pour image App Server
+- name: Configuration de base pour image App Server (Alpine)
   hosts: all
   become: yes
   vars:
     image_type: app
 
   tasks:
-    - name: Mise à jour du système
-      apt:
+    - name: Mise à jour des packages
+      apk:
         update_cache: yes
-        upgrade: dist
-        cache_valid_time: 3600
+        upgrade: yes
 
     - name: Installation de Python et dépendances
-      apt:
+      apk:
         name:
           - python3
-          - python3-pip
-          - python3-venv
+          - py3-pip
+          - py3-virtualenv
+          - py3-psycopg2
+          - gcc
+          - musl-dev
           - python3-dev
-          - build-essential
-          - libpq-dev
+          - libffi-dev
         state: present
 
     - name: Création de l'utilisateur application
       user:
         name: appuser
-        shell: /bin/bash
+        shell: /bin/sh
         create_home: yes
         system: yes
 
@@ -46,12 +47,6 @@
         group: appuser
         mode: '0755'
 
-    - name: Création de l'environnement virtuel Python
-      command: python3 -m venv /opt/app/venv
-      args:
-        creates: /opt/app/venv
-      become_user: appuser
-
     - name: Installation des packages Python de base
       pip:
         name:
@@ -59,44 +54,30 @@
           - gunicorn
           - psycopg2-binary
           - python-dotenv
+          - flask-cors
           - requests
-        virtualenv: /opt/app/venv
-      become_user: appuser
+        executable: pip3
 
-    - name: Création du fichier de configuration systemd
+    - name: Création du script de démarrage OpenRC
       copy:
-        dest: /etc/systemd/system/app.service
+        dest: /etc/init.d/app
         content: |
-          [Unit]
-          Description=Application Python Flask
-          After=network.target
+          #!/sbin/openrc-run
 
-          [Service]
-          User=appuser
-          Group=appuser
-          WorkingDirectory=/opt/app
-          Environment="PATH=/opt/app/venv/bin"
-          EnvironmentFile=/opt/app/.env
-          ExecStart=/opt/app/venv/bin/gunicorn --workers 4 --bind 0.0.0.0:3000 app:app
-          Restart=always
-          RestartSec=5
+          name="Flask Application"
+          description="Python Flask API Server"
 
-          [Install]
-          WantedBy=multi-user.target
-        mode: '0644'
+          command="/usr/bin/gunicorn"
+          command_args="--workers 2 --bind 0.0.0.0:3000 --chdir /opt/app app:app"
+          command_user="appuser"
+          command_background="yes"
+          pidfile="/run/${RC_SVCNAME}.pid"
 
-    - name: Création du fichier .env template
-      copy:
-        dest: /opt/app/.env.template
-        content: |
-          FLASK_ENV=production
-          DATABASE_URL=postgresql://user:password@db-master:5432/appdb
-          SECRET_KEY=change-me-in-production
-          LOG_LEVEL=INFO
-        owner: appuser
-        group: appuser
-        mode: '0600'
+          depend() {
+              need net
+              after firewall
+          }
+        mode: '0755'
 
-    - name: Rechargement de systemd
-      systemd:
-        daemon_reload: yes
+    - name: Activation du service au démarrage
+      command: rc-update add app default

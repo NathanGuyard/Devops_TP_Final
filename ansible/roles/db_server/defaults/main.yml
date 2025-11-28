@@ -1,2 +1,3 @@
 ---
+# Version PostgreSQL disponible sur Alpine 3.19
 postgresql_version: "15"

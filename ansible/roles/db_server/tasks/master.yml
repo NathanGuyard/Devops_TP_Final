@@ -1,8 +1,9 @@
 ---
+# Configuration Master PostgreSQL pour Alpine Linux
 - name: Configuration PostgreSQL Master
   template:
     src: postgresql-master.conf.j2
-    dest: "/etc/postgresql/{{ postgresql_version }}/main/conf.d/master.conf"
+    dest: /var/lib/postgresql/data/postgresql.conf
     owner: postgres
     group: postgres
     mode: '0644'
@@ -11,16 +12,16 @@
 - name: Configuration pg_hba.conf pour la réplication
   template:
     src: pg_hba.conf.j2
-    dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+    dest: /var/lib/postgresql/data/pg_hba.conf
     owner: postgres
     group: postgres
     mode: '0640'
   notify: Restart PostgreSQL
 
-- name: Redémarrage de PostgreSQL pour appliquer la configuration
+- name: Démarrage de PostgreSQL Master
   service:
     name: postgresql
-    state: restarted
+    state: started
 
 - name: Attente du démarrage de PostgreSQL
   wait_for:
@@ -36,13 +37,17 @@
     role_attr_flags: REPLICATION,LOGIN
     state: present
 
+- name: Création du slot de réplication
+  become_user: postgres
+  postgresql_query:
+    query: "SELECT * FROM pg_create_physical_replication_slot('slave_slot') WHERE NOT EXISTS (SELECT 1 FROM pg_replication_slots WHERE slot_name = 'slave_slot')"
+  ignore_errors: yes
+
 - name: Création de la base de données
   become_user: postgres
   postgresql_db:
     name: "{{ db_name }}"
     encoding: UTF8
-    lc_collate: en_US.UTF-8
-    lc_ctype: en_US.UTF-8
     template: template0
     state: present
 

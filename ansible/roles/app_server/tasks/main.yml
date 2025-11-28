@@ -1,19 +1,18 @@
 ---
+# Rôle App Server pour Alpine Linux
 - name: Installation de Python et dépendances
-  apt:
+  apk:
     name:
       - python3
-      - python3-pip
-      - python3-venv
-      - python3-dev
-      - build-essential
-      - libpq-dev
+      - py3-pip
+      - py3-psycopg2
+      - py3-gunicorn
     state: present
 
 - name: Création de l'utilisateur application
   user:
     name: appuser
-    shell: /bin/bash
+    shell: /bin/sh
     create_home: yes
     system: yes
 
@@ -33,26 +32,26 @@
     group: appuser
     mode: '0755'
 
-- name: Création de l'environnement virtuel Python
-  command: python3 -m venv /opt/app/venv
-  args:
-    creates: /opt/app/venv
-  become_user: appuser
-
-- name: Copie du code de l'application
-  synchronize:
-    src: "{{ playbook_dir }}/../app/backend/"
-    dest: /opt/app/
-    delete: no
-    recursive: yes
-  delegate_to: "{{ inventory_hostname }}"
-  become: yes
-
 - name: Installation des dépendances Python
   pip:
-    requirements: /opt/app/requirements.txt
-    virtualenv: /opt/app/venv
-  become_user: appuser
+    name:
+      - flask
+      - flask-cors
+      - gunicorn
+      - psycopg2-binary
+      - python-dotenv
+      - requests
+    executable: pip3
+    extra_args: --break-system-packages
+
+- name: Copie du code de l'application
+  copy:
+    src: "{{ playbook_dir }}/../app/backend/"
+    dest: /opt/app/
+    owner: appuser
+    group: appuser
+    mode: '0644'
+    directory_mode: '0755'
 
 - name: Configuration du fichier .env
   template:
@@ -62,25 +61,25 @@
     group: appuser
     mode: '0600'
 
-- name: Configuration du service systemd
+- name: Création du script de démarrage OpenRC
   template:
-    src: app.service.j2
-    dest: /etc/systemd/system/app.service
-    mode: '0644'
+    src: app.openrc.j2
+    dest: /etc/init.d/app
+    mode: '0755'
   notify: Restart App
 
-- name: Rechargement de systemd
-  systemd:
-    daemon_reload: yes
+- name: Autoriser le port de l'application dans iptables
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: "{{ app_port }}"
+    jump: ACCEPT
 
-- name: Autoriser le port de l'application dans le firewall
-  ufw:
-    rule: allow
-    port: "{{ app_port }}"
-    proto: tcp
+- name: Activation du service au démarrage
+  command: rc-update add app default
+  changed_when: false
 
-- name: Démarrage et activation du service
+- name: Démarrage du service
   service:
     name: app
     state: started
-    enabled: yes

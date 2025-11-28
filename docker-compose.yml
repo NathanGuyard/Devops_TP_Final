@@ -1,0 +1,140 @@
+services:
+  # ===========================================
+  # DATABASE SERVERS (démarrent en premier)
+  # ===========================================
+  db-master:
+    image: postgres:15-alpine
+    container_name: db-master
+    environment:
+      - POSTGRES_USER=appuser
+      - POSTGRES_PASSWORD=SecurePassword123
+      - POSTGRES_DB=appdb
+    volumes:
+      - ./docker/postgres/init-master.sh:/docker-entrypoint-initdb.d/init.sh:ro
+      - db-master-data:/var/lib/postgresql/data
+    networks:
+      - database
+    restart: unless-stopped
+
+  db-slave:
+    image: postgres:15-alpine
+    container_name: db-slave
+    environment:
+      - POSTGRES_USER=appuser
+      - POSTGRES_PASSWORD=SecurePassword123
+      - POSTGRES_DB=appdb
+    volumes:
+      - db-slave-data:/var/lib/postgresql/data
+    depends_on:
+      - db-master
+    networks:
+      - database
+    restart: unless-stopped
+
+  # ===========================================
+  # APP SERVERS (2 instances)
+  # ===========================================
+  app-01:
+    build:
+      context: ./app/backend
+      dockerfile: Dockerfile
+    container_name: app-01
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://appuser:SecurePassword123@db-master:5432/appdb
+      - DATABASE_URL_READ=postgresql://appuser:SecurePassword123@db-master:5432/appdb
+      - APP_PORT=3000
+      - HOSTNAME=app-01
+    depends_on:
+      - db-master
+      - db-slave
+    networks:
+      - backend
+      - database
+    restart: unless-stopped
+
+  app-02:
+    build:
+      context: ./app/backend
+      dockerfile: Dockerfile
+    container_name: app-02
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=postgresql://appuser:SecurePassword123@db-master:5432/appdb
+      - DATABASE_URL_READ=postgresql://appuser:SecurePassword123@db-master:5432/appdb
+      - APP_PORT=3000
+      - HOSTNAME=app-02
+    depends_on:
+      - db-master
+      - db-slave
+    networks:
+      - backend
+      - database
+    restart: unless-stopped
+
+  # ===========================================
+  # WEB SERVERS (2 instances)
+  # ===========================================
+  web-01:
+    image: nginx:alpine
+    container_name: web-01
+    volumes:
+      - ./docker/nginx-web/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./app/frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - app-01
+      - app-02
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  web-02:
+    image: nginx:alpine
+    container_name: web-02
+    volumes:
+      - ./docker/nginx-web/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./app/frontend:/usr/share/nginx/html:ro
+    depends_on:
+      - app-01
+      - app-02
+    networks:
+      - frontend
+      - backend
+    restart: unless-stopped
+
+  # ===========================================
+  # LOAD BALANCER (1 instance)
+  # ===========================================
+  load-balancer:
+    image: nginx:alpine
+    container_name: lb-01
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx-lb/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - web-01
+      - web-02
+    networks:
+      - frontend
+    restart: unless-stopped
+
+# ===========================================
+# NETWORKS
+# ===========================================
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+  database:
+    driver: bridge
+
+# ===========================================
+# VOLUMES
+# ===========================================
+volumes:
+  db-master-data:
+  db-slave-data:

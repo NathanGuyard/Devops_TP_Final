@@ -1,27 +1,20 @@
 ---
-- name: Configuration de base pour image Web Server
+- name: Configuration de base pour image Web Server (Alpine)
   hosts: all
   become: yes
   vars:
     image_type: web
 
   tasks:
-    - name: Mise à jour du système
-      apt:
+    - name: Mise à jour des packages
+      apk:
         update_cache: yes
-        upgrade: dist
-        cache_valid_time: 3600
+        upgrade: yes
 
     - name: Installation de Nginx
-      apt:
+      apk:
         name:
           - nginx
-          - nginx-extras
-        state: present
-
-    - name: Installation des outils SSL
-      apt:
-        name:
           - openssl
           - ca-certificates
         state: present
@@ -41,63 +34,18 @@
       args:
         creates: /etc/nginx/ssl/nginx.crt
 
-    - name: Configuration Nginx optimisée
-      copy:
-        dest: /etc/nginx/nginx.conf
-        content: |
-          user www-data;
-          worker_processes auto;
-          pid /run/nginx.pid;
-          include /etc/nginx/modules-enabled/*.conf;
-
-          events {
-              worker_connections 1024;
-              use epoll;
-              multi_accept on;
-          }
-
-          http {
-              sendfile on;
-              tcp_nopush on;
-              tcp_nodelay on;
-              keepalive_timeout 65;
-              types_hash_max_size 2048;
-              server_tokens off;
-
-              include /etc/nginx/mime.types;
-              default_type application/octet-stream;
-
-              # Logging
-              access_log /var/log/nginx/access.log;
-              error_log /var/log/nginx/error.log;
-
-              # Gzip
-              gzip on;
-              gzip_vary on;
-              gzip_proxied any;
-              gzip_comp_level 6;
-              gzip_types text/plain text/css text/xml application/json application/javascript application/rss+xml application/atom+xml image/svg+xml;
-
-              include /etc/nginx/conf.d/*.conf;
-              include /etc/nginx/sites-enabled/*;
-          }
-        mode: '0644'
-
-    - name: Désactivation du site par défaut
-      file:
-        path: /etc/nginx/sites-enabled/default
-        state: absent
-
     - name: Création du répertoire web
       file:
         path: /var/www/html
         state: directory
-        owner: www-data
-        group: www-data
+        owner: nginx
+        group: nginx
         mode: '0755'
+
+    - name: Activation de Nginx au démarrage
+      command: rc-update add nginx default
 
     - name: Arrêt de Nginx pour l'image
       service:
         name: nginx
         state: stopped
-        enabled: yes

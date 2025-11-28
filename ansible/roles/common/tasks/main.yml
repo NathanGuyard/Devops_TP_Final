@@ -1,22 +1,19 @@
 ---
-- name: Mise à jour du cache apt
-  apt:
+# Rôle common adapté pour Alpine Linux
+- name: Mise à jour du cache apk
+  apk:
     update_cache: yes
-    cache_valid_time: 3600
 
 - name: Installation des packages de base
-  apt:
+  apk:
     name:
       - curl
       - wget
       - vim
       - htop
-      - net-tools
-      - dnsutils
+      - bash
       - ca-certificates
-      - gnupg
-      - software-properties-common
-      - ufw
+      - iptables
     state: present
 
 - name: Configuration du hostname
@@ -38,16 +35,15 @@
     - { ip: "{{ db_slave_ip }}", name: "db-slave" }
 
 - name: Configuration du timezone
-  timezone:
-    name: Europe/Paris
+  copy:
+    content: "Europe/Paris"
+    dest: /etc/timezone
+  notify: Update timezone
 
-- name: Activation de UFW
-  ufw:
-    state: enabled
-    policy: deny
-
-- name: Autoriser SSH
-  ufw:
-    rule: allow
-    port: '22'
-    proto: tcp
+- name: Autoriser SSH via iptables
+  iptables:
+    chain: INPUT
+    protocol: tcp
+    destination_port: 22
+    jump: ACCEPT
+    state: present

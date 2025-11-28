@@ -4,11 +4,11 @@
     "proxmox_username": "{{env `PROXMOX_USERNAME`}}",
     "proxmox_password": "{{env `PROXMOX_PASSWORD`}}",
     "proxmox_node": "{{env `PROXMOX_NODE`}}",
-    "iso_file": "local:iso/ubuntu-22.04-server.iso",
+    "iso_file": "local:iso/alpine-virt-3.19.0-x86_64.iso",
     "vm_id": "9002",
-    "vm_name": "app-server-template",
-    "ssh_username": "ubuntu",
-    "ssh_password": "ubuntu"
+    "vm_name": "alpine-app-template",
+    "ssh_username": "root",
+    "ssh_password": "alpine"
   },
   "builders": [
     {
@@ -25,17 +25,17 @@
 
       "vm_id": "{{user `vm_id`}}",
       "vm_name": "{{user `vm_name`}}",
-      "template_description": "App Server Template - Python Runtime",
+      "template_description": "Alpine Linux - App Server Template (Python/Flask)",
 
-      "cores": 2,
-      "memory": 4096,
+      "cores": 1,
+      "memory": 512,
       "os": "l26",
 
       "scsi_controller": "virtio-scsi-pci",
       "disks": [
         {
           "type": "scsi",
-          "disk_size": "20G",
+          "disk_size": "2G",
           "storage_pool": "local-lvm",
           "format": "raw"
         }
@@ -53,25 +53,38 @@
 
       "ssh_username": "{{user `ssh_username`}}",
       "ssh_password": "{{user `ssh_password`}}",
-      "ssh_timeout": "20m",
+      "ssh_timeout": "15m",
 
-      "http_directory": "http",
       "boot_command": [
-        "<esc><wait>",
-        "e<wait>",
-        "<down><down><down><end>",
-        " autoinstall ds=nocloud-net;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/",
-        "<F10>"
+        "root<enter><wait>",
+        "setup-alpine<enter><wait5>",
+        "<enter><wait>",
+        "alpine-app<enter><wait>",
+        "<enter><wait>",
+        "dhcp<enter><wait5>",
+        "<enter><wait>",
+        "{{user `ssh_password`}}<enter><wait>",
+        "{{user `ssh_password`}}<enter><wait10>",
+        "<enter><wait>",
+        "<enter><wait>",
+        "<enter><wait>",
+        "openssh<enter><wait5>",
+        "<enter><wait>",
+        "<enter><wait>",
+        "sda<enter><wait>",
+        "sys<enter><wait>",
+        "y<enter><wait30>",
+        "reboot<enter>"
       ],
-      "boot_wait": "5s"
+      "boot_wait": "30s"
     }
   ],
   "provisioners": [
     {
       "type": "shell",
       "inline": [
-        "sudo apt-get update",
-        "sudo apt-get install -y python3 python3-pip python3-venv"
+        "apk update",
+        "apk add python3 py3-pip sudo bash curl"
       ]
     },
     {
@@ -79,16 +92,14 @@
       "playbook_file": "../ansible/playbooks/packer-app.yml",
       "extra_arguments": [
         "--extra-vars",
-        "image_type=app"
+        "image_type=app ansible_python_interpreter=/usr/bin/python3"
       ]
     },
     {
       "type": "shell",
       "inline": [
-        "sudo apt-get clean",
-        "sudo rm -rf /var/lib/apt/lists/*",
-        "sudo rm -rf /tmp/*",
-        "sudo sync"
+        "rm -rf /var/cache/apk/*",
+        "sync"
       ]
     }
   ]

@@ -4,7 +4,7 @@
     name: app
     state: restarted
 
-- name: Reload App
+- name: Stop App
   service:
     name: app
-    state: reloaded
+    state: stopped

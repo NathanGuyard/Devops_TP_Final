@@ -1,0 +1,3 @@
+---
+- name: Update timezone
+  command: setup-timezone -z Europe/Paris

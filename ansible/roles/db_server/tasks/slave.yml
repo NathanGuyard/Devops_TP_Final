@@ -1,17 +1,19 @@
 ---
+# Configuration Slave PostgreSQL pour Alpine Linux
 - name: Arrêt de PostgreSQL sur le slave
   service:
     name: postgresql
     state: stopped
+  ignore_errors: yes
 
 - name: Suppression des données existantes
   file:
-    path: "/var/lib/postgresql/{{ postgresql_version }}/main"
+    path: /var/lib/postgresql/data
     state: absent
 
 - name: Création du répertoire de données
   file:
-    path: "/var/lib/postgresql/{{ postgresql_version }}/main"
+    path: /var/lib/postgresql/data
     state: directory
     owner: postgres
     group: postgres
@@ -20,22 +22,22 @@
 - name: Base backup depuis le master
   become_user: postgres
   command: >
-    pg_basebackup -h {{ db_master_ip }} -D /var/lib/postgresql/{{ postgresql_version }}/main
-    -U {{ replication_user }} -v -P --wal-method=stream
+    pg_basebackup -h {{ db_master_ip }} -D /var/lib/postgresql/data
+    -U {{ replication_user }} -v -P --wal-method=stream -R
   environment:
     PGPASSWORD: "{{ replication_password }}"
 
 - name: Configuration PostgreSQL Slave
   template:
     src: postgresql-slave.conf.j2
-    dest: "/etc/postgresql/{{ postgresql_version }}/main/conf.d/slave.conf"
+    dest: /var/lib/postgresql/data/postgresql.conf
     owner: postgres
     group: postgres
     mode: '0644'
 
 - name: Création du fichier standby.signal
   file:
-    path: "/var/lib/postgresql/{{ postgresql_version }}/main/standby.signal"
+    path: /var/lib/postgresql/data/standby.signal
     state: touch
     owner: postgres
     group: postgres
@@ -44,7 +46,7 @@
 - name: Configuration pg_hba.conf slave
   template:
     src: pg_hba-slave.conf.j2
-    dest: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+    dest: /var/lib/postgresql/data/pg_hba.conf
     owner: postgres
     group: postgres
     mode: '0640'
