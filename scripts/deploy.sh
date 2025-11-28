@@ -40,14 +40,32 @@ check_prerequisites() {
     log_success "Tous les prérequis sont installés"
 }
 
+# Téléchargement de l'ISO Alpine si nécessaire
+download_iso() {
+    local ISO_PATH="/var/lib/vz/template/iso/alpine-virt-3.19.0-x86_64.iso"
+    local ISO_URL="https://dl-cdn.alpinelinux.org/alpine/v3.19/releases/x86_64/alpine-virt-3.19.0-x86_64.iso"
+
+    if [ ! -f "$ISO_PATH" ]; then
+        log_info "Téléchargement de l'ISO Alpine Linux..."
+        wget -q --show-progress -O "$ISO_PATH" "$ISO_URL"
+        log_success "ISO téléchargée avec succès"
+    else
+        log_success "ISO Alpine déjà présente"
+    fi
+}
+
 # Construction des images Packer
 build_images() {
     log_info "Construction des images Packer..."
+
+    # Télécharger l'ISO d'abord
+    download_iso
+
     cd "${PROJECT_DIR}/packer"
 
     for image in web app db; do
         log_info "Construction de l'image ${image}..."
-        packer build -var-file=variables.pkrvars.hcl ${image}.json
+        packer build -var-file=variables.json ${image}.json
         log_success "Image ${image} construite avec succès"
     done
 
