@@ -30,6 +30,8 @@
       "cores": 1,
       "memory": 512,
       "os": "l26",
+      "qemu_agent": false,
+      "cpu_type": "qemu64",
 
       "scsi_controller": "virtio-scsi-pci",
       "disks": [

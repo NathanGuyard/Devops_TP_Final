@@ -25,7 +25,7 @@ resource "proxmox_vm_qemu" "load_balancer" {
   desc        = "Load Balancer Nginx"
   target_node = var.proxmox_node
   clone       = var.web_template_name
-  agent       = 1
+  agent       = 0
   os_type     = "cloud-init"
   cores       = var.vm_cores
   sockets     = 1
@@ -68,7 +68,7 @@ resource "proxmox_vm_qemu" "web_servers" {
   desc        = "Web Server Nginx ${count.index + 1}"
   target_node = var.proxmox_node
   clone       = var.web_template_name
-  agent       = 1
+  agent       = 0
   os_type     = "cloud-init"
   cores       = var.vm_cores
   sockets     = 1
@@ -111,7 +111,7 @@ resource "proxmox_vm_qemu" "app_servers" {
   desc        = "App Server Python ${count.index + 1}"
   target_node = var.proxmox_node
   clone       = var.app_template_name
-  agent       = 1
+  agent       = 0
   os_type     = "cloud-init"
   cores       = var.vm_cores
   sockets     = 1
@@ -153,7 +153,7 @@ resource "proxmox_vm_qemu" "db_master" {
   desc        = "Database Server PostgreSQL Master"
   target_node = var.proxmox_node
   clone       = var.db_template_name
-  agent       = 1
+  agent       = 0
   os_type     = "cloud-init"
   cores       = var.vm_cores
   sockets     = 1
@@ -192,7 +192,7 @@ resource "proxmox_vm_qemu" "db_slave" {
   desc        = "Database Server PostgreSQL Slave"
   target_node = var.proxmox_node
   clone       = var.db_template_name
-  agent       = 1
+  agent       = 0
   os_type     = "cloud-init"
   cores       = var.vm_cores
   sockets     = 1
